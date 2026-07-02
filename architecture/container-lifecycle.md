@@ -47,3 +47,8 @@ one type, so:
 
 Per-message work inside a WebSocket handler opens a nested `Scope.REQUEST` child
 of the SESSION container (`session_container.build_child_container(scope=Scope.REQUEST)`).
+
+Scope selection is derived from the request's handshake headers via `can_prepare`,
+not from the route, so a request carrying valid WebSocket-upgrade headers opens a
+SESSION child regardless of what its handler actually does — a REQUEST-scoped
+provider would then fail to resolve for such a request.

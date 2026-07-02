@@ -25,11 +25,24 @@ _CONNECTION_PROVIDERS = (aiohttp_request_provider, aiohttp_websocket_provider)
 # Root container on the aiohttp application (typed key, aiohttp >= 3.9).
 _DI_CONTAINER_APP_KEY: "web.AppKey[Container]" = web.AppKey("modern_di_container", Container)
 # Per-connection child container, stashed on the request's dict interface.
-_CONTAINER_REQUEST_KEY = "modern_di_container"
+_CONTAINER_REQUEST_KEY = "modern_di_child_container"
 
 
 def fetch_di_container(app: web.Application) -> Container:
     return app[_DI_CONTAINER_APP_KEY]
+
+
+def fetch_request_container(request: web.Request) -> Container:
+    """Return the per-connection child container the middleware built for this request."""
+    try:
+        return request[_CONTAINER_REQUEST_KEY]
+    except KeyError:
+        msg = (
+            "No modern-di container found on the request. "
+            "Call setup_di(app, container) so requests pass through the modern-di middleware "
+            "before using @inject or fetch_request_container."
+        )
+        raise RuntimeError(msg) from None
 
 
 async def _on_startup(app: web.Application) -> None:
@@ -108,15 +121,7 @@ def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[.
 
     @functools.wraps(func)
     async def wrapper(request: web.Request) -> T:
-        try:
-            child_container: Container = request[_CONTAINER_REQUEST_KEY]
-        except KeyError:
-            msg = (
-                "No modern-di container found on the request. "
-                "Call setup_di(app, container) so requests pass through the modern-di middleware "
-                "before using @inject."
-            )
-            raise RuntimeError(msg) from None
+        child_container = fetch_request_container(request)
         return await func(request, **_resolve_di_params(child_container, di_params))
 
     return wrapper
