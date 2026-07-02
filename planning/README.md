@@ -1,6 +1,6 @@
 # Planning
 
-How change is proposed, designed, and recorded in `modern-di-starlette`. Start
+How change is proposed, designed, and recorded in `modern-di-aiohttp`. Start
 with the [Quick path](#quick-path-start-here); reach for
 [Conventions](#conventions) when it isn't enough.
 

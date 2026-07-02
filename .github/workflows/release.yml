@@ -29,7 +29,7 @@ jobs:
       # GitHub Release is created advertising a version that never reached PyPI.
       # `just publish` derives the version from $GITHUB_REF_NAME (the tag name).
       # Auth via PyPI Trusted Publishing (OIDC); no PYPI_TOKEN. Needs a Trusted
-      # Publisher on the modern-di-starlette PyPI project (env: pypi, workflow: release.yml).
+      # Publisher on the modern-di-aiohttp PyPI project (env: pypi, workflow: release.yml).
       - run: just publish
 
       # Description source: planning/releases/<tag>.md if present (verbatim, no
