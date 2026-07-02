@@ -1,10 +1,16 @@
 """modern-di integration for aiohttp."""
 
+import dataclasses
 import enum
+import functools
 import typing
 
 from aiohttp import web
 from modern_di import Container, Scope, providers
+
+
+T_co = typing.TypeVar("T_co", covariant=True)
+T = typing.TypeVar("T")
 
 
 # aiohttp exposes only `web.Request` at middleware entry (a WebSocket is an
@@ -61,3 +67,56 @@ def setup_di(app: web.Application, container: Container) -> Container:
     app.on_cleanup.append(_on_cleanup)
     app.middlewares.append(_di_middleware)
     return container
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class _FromDI(typing.Generic[T_co]):
+    dependency: providers.AbstractProvider[T_co] | type[T_co]
+
+
+def FromDI(dependency: providers.AbstractProvider[T_co] | type[T_co]) -> T_co:  # noqa: N802
+    return typing.cast(T_co, _FromDI(dependency))
+
+
+def _parse_inject_params(func: typing.Callable[..., typing.Any]) -> dict[str, _FromDI[typing.Any]]:
+    hints = typing.get_type_hints(func, include_extras=True)
+    di_params: dict[str, _FromDI[typing.Any]] = {}
+    for name, hint in hints.items():
+        if name == "return":
+            continue
+        if typing.get_origin(hint) is typing.Annotated:
+            for meta in typing.get_args(hint)[1:]:
+                if isinstance(meta, _FromDI):
+                    di_params[name] = meta
+                    break
+    return di_params
+
+
+def _resolve_di_params(container: Container, di_params: dict[str, _FromDI[typing.Any]]) -> dict[str, typing.Any]:
+    return {
+        name: (
+            container.resolve_provider(marker.dependency)
+            if isinstance(marker.dependency, providers.AbstractProvider)
+            else container.resolve(dependency_type=marker.dependency)
+        )
+        for name, marker in di_params.items()
+    }
+
+
+def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[..., typing.Awaitable[T]]:
+    di_params = _parse_inject_params(func)
+
+    @functools.wraps(func)
+    async def wrapper(request: web.Request) -> T:
+        try:
+            child_container: Container = request[_CONTAINER_REQUEST_KEY]
+        except KeyError:
+            msg = (
+                "No modern-di container found on the request. "
+                "Call setup_di(app, container) so requests pass through the modern-di middleware "
+                "before using @inject."
+            )
+            raise RuntimeError(msg) from None
+        return await func(request, **_resolve_di_params(child_container, di_params))
+
+    return wrapper
