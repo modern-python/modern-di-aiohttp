@@ -18,7 +18,7 @@ async def _ok(request: web.Request) -> web.Response:  # noqa: ARG001
 
 
 async def test_startup_reopens_closed_root(aiohttp_client: AiohttpClient) -> None:
-    container = modern_di.Container(groups=[Dependencies])
+    container = modern_di.Container(groups=[Dependencies], validate=True)
     container.close_sync()
     assert container.closed
 
@@ -34,7 +34,7 @@ async def test_startup_reopens_closed_root(aiohttp_client: AiohttpClient) -> Non
 
 async def test_cleanup_closes_root() -> None:
     app = web.Application()
-    container = modern_di.Container(groups=[Dependencies])
+    container = modern_di.Container(groups=[Dependencies], validate=True)
     setup_di(app, container)
 
     await _on_startup(app)
