@@ -9,6 +9,6 @@ from tests.dependencies import Dependencies
 @pytest.fixture
 def app() -> web.Application:
     application = web.Application()
-    container = modern_di.Container(groups=[Dependencies])
+    container = modern_di.Container(groups=[Dependencies], validate=True)
     setup_di(application, container)
     return application
