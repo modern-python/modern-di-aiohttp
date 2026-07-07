@@ -75,7 +75,7 @@ async def _di_middleware(
 
 def setup_di(app: web.Application, container: Container) -> Container:
     app[_DI_CONTAINER_APP_KEY] = container
-    container.providers_registry.add_providers(*_CONNECTION_PROVIDERS)
+    container.add_providers(*_CONNECTION_PROVIDERS)
     app.on_startup.append(_on_startup)
     app.on_cleanup.append(_on_cleanup)
     app.middlewares.append(_di_middleware)
@@ -106,14 +106,7 @@ def _parse_inject_params(func: typing.Callable[..., typing.Any]) -> dict[str, _F
 
 
 def _resolve_di_params(container: Container, di_params: dict[str, _FromDI[typing.Any]]) -> dict[str, typing.Any]:
-    return {
-        name: (
-            container.resolve_provider(marker.dependency)
-            if isinstance(marker.dependency, providers.AbstractProvider)
-            else container.resolve(dependency_type=marker.dependency)
-        )
-        for name, marker in di_params.items()
-    }
+    return {name: container.resolve_dependency(marker.dependency) for name, marker in di_params.items()}
 
 
 def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[..., typing.Awaitable[T]]:
