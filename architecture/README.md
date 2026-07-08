@@ -6,7 +6,7 @@ language) — living prose, no frontmatter, dated by git.
 
 **Promotion rule:** when a change alters a capability's behavior, the
 implementing PR hand-edits the matching `architecture/<capability>.md` in the
-same diff, alongside the code. The *why* lives in the change bundle under
+same diff, alongside the code. The *why* lives in the change file under
 [`planning/changes/`](../planning/changes/).
 
 ## Capabilities
