@@ -19,6 +19,8 @@
 
 [Modern-DI](https://github.com/modern-python/modern-di) integration for [aiohttp](https://docs.aiohttp.org).
 
+Full guide: [aiohttp integration docs](https://modern-di.modern-python.org/integrations/aiohttp/)
+
 ## Installation
 
 ```bash
