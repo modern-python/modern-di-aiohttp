@@ -1,12 +1,11 @@
 """modern-di integration for aiohttp."""
 
 import dataclasses
-import enum
 import functools
 import typing
 
 from aiohttp import web
-from modern_di import Container, Scope, providers
+from modern_di import Container, Scope, integrations, providers
 
 
 T_co = typing.TypeVar("T_co", covariant=True)
@@ -61,16 +60,19 @@ async def _di_middleware(
     handler: typing.Callable[[web.Request], typing.Awaitable[web.StreamResponse]],
 ) -> web.StreamResponse:
     # `can_prepare` never raises and does not start the handshake; it only checks
-    # whether the request is a valid WebSocket upgrade.
-    connection_scope: enum.IntEnum = Scope.SESSION if web.WebSocketResponse().can_prepare(request).ok else Scope.REQUEST
-    child_container = fetch_di_container(request.app).build_child_container(
-        context={web.Request: request}, scope=connection_scope
+    # whether the request is a valid WebSocket upgrade. Both connection providers
+    # bind `web.Request`, so `integrations.classify_connection`'s isinstance
+    # dispatch can't tell them apart — this probe is what picks the provider;
+    # `integrations.bind` only derives the scope+context once it's picked.
+    provider = (
+        aiohttp_websocket_provider if web.WebSocketResponse().can_prepare(request).ok else aiohttp_request_provider
     )
-    request[_CONTAINER_REQUEST_KEY] = child_container
-    try:
+    match = integrations.bind(provider, request)
+    async with fetch_di_container(request.app).build_child_container(
+        scope=match.scope, context=match.context
+    ) as child_container:
+        request[_CONTAINER_REQUEST_KEY] = child_container
         return await handler(request)
-    finally:
-        await child_container.close_async()
 
 
 def setup_di(app: web.Application, container: Container) -> Container:
