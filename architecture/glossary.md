@@ -18,6 +18,6 @@ A `ContextProvider` exposing the connection `web.Request`: `aiohttp_request_prov
 (REQUEST, by type) and the reference-only `aiohttp_websocket_provider` (SESSION).
 
 **FromDI marker**:
-The inert `Annotated` metadata (`_FromDI`) that flags a handler parameter for
-resolution by `@inject`.
+The inert `Annotated` metadata (`modern_di.integrations.Marker`) that flags a
+handler parameter for resolution by `@inject`.
 _Avoid_: Depends (that is FastAPI's mechanism).
