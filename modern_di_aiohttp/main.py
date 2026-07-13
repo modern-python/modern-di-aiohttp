@@ -1,15 +1,12 @@
 """modern-di integration for aiohttp."""
 
-import dataclasses
-import enum
 import functools
 import typing
 
 from aiohttp import web
-from modern_di import Container, Scope, providers
+from modern_di import Container, Scope, integrations, providers
 
 
-T_co = typing.TypeVar("T_co", covariant=True)
 T = typing.TypeVar("T")
 
 
@@ -61,16 +58,19 @@ async def _di_middleware(
     handler: typing.Callable[[web.Request], typing.Awaitable[web.StreamResponse]],
 ) -> web.StreamResponse:
     # `can_prepare` never raises and does not start the handshake; it only checks
-    # whether the request is a valid WebSocket upgrade.
-    connection_scope: enum.IntEnum = Scope.SESSION if web.WebSocketResponse().can_prepare(request).ok else Scope.REQUEST
-    child_container = fetch_di_container(request.app).build_child_container(
-        context={web.Request: request}, scope=connection_scope
+    # whether the request is a valid WebSocket upgrade. Both connection providers
+    # bind `web.Request`, so `integrations.classify_connection`'s isinstance
+    # dispatch can't tell them apart — this probe is what picks the provider;
+    # `integrations.bind` only derives the scope+context once it's picked.
+    provider = (
+        aiohttp_websocket_provider if web.WebSocketResponse().can_prepare(request).ok else aiohttp_request_provider
     )
-    request[_CONTAINER_REQUEST_KEY] = child_container
-    try:
+    match = integrations.bind(provider, request)
+    async with fetch_di_container(request.app).build_child_container(
+        scope=match.scope, context=match.context
+    ) as child_container:
+        request[_CONTAINER_REQUEST_KEY] = child_container
         return await handler(request)
-    finally:
-        await child_container.close_async()
 
 
 def setup_di(app: web.Application, container: Container) -> Container:
@@ -82,39 +82,15 @@ def setup_di(app: web.Application, container: Container) -> Container:
     return container
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
-class _FromDI(typing.Generic[T_co]):
-    dependency: providers.AbstractProvider[T_co] | type[T_co]
-
-
-def FromDI(dependency: providers.AbstractProvider[T_co] | type[T_co]) -> T_co:  # noqa: N802
-    return typing.cast(T_co, _FromDI(dependency))
-
-
-def _parse_inject_params(func: typing.Callable[..., typing.Any]) -> dict[str, _FromDI[typing.Any]]:
-    hints = typing.get_type_hints(func, include_extras=True)
-    di_params: dict[str, _FromDI[typing.Any]] = {}
-    for name, hint in hints.items():
-        if name == "return":
-            continue
-        if typing.get_origin(hint) is typing.Annotated:
-            for meta in typing.get_args(hint)[1:]:
-                if isinstance(meta, _FromDI):
-                    di_params[name] = meta
-                    break
-    return di_params
-
-
-def _resolve_di_params(container: Container, di_params: dict[str, _FromDI[typing.Any]]) -> dict[str, typing.Any]:
-    return {name: container.resolve_dependency(marker.dependency) for name, marker in di_params.items()}
+FromDI = integrations.from_di
 
 
 def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[..., typing.Awaitable[T]]:
-    di_params = _parse_inject_params(func)
+    markers = integrations.parse_markers(func)
 
     @functools.wraps(func)
     async def wrapper(request: web.Request) -> T:
         child_container = fetch_request_container(request)
-        return await func(request, **_resolve_di_params(child_container, di_params))
+        return await func(request, **integrations.resolve_markers(child_container, markers))
 
     return wrapper

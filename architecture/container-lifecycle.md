@@ -38,12 +38,22 @@ one type, so:
 `_di_middleware` (`@web.middleware`) runs for every request. It:
 
 1. Detects a WebSocket upgrade with `web.WebSocketResponse().can_prepare(request).ok`
-   (checks the handshake without starting it or raising).
-2. Opens a `Scope.SESSION` child for a WebSocket, else a `Scope.REQUEST` child,
-   with `{web.Request: request}` injected as context.
-3. Stashes the child on the request under `_CONTAINER_REQUEST_KEY`.
-4. `close_async`s the child when the handler returns (for a WebSocket that is
-   when the socket closes, since the handler owns the socket's whole lifetime).
+   (checks the handshake without starting it or raising) and picks
+   `aiohttp_websocket_provider` or `aiohttp_request_provider` accordingly — this
+   probe is aiohttp's own; `modern_di.integrations.classify_connection`'s
+   isinstance-over-tuple dispatch can't do it, since both providers bind
+   `web.Request`.
+2. Derives the child's scope and context from the picked provider via
+   `modern_di.integrations.bind(provider, request)` — `Scope.SESSION` for a
+   WebSocket, else `Scope.REQUEST`, with `{web.Request: request}` injected as
+   context.
+3. Opens the child as an `async with` block — `Container.build_child_container`
+   returns a container that is already open, so entering it is a no-op — and
+   stashes it on the request under `_CONTAINER_REQUEST_KEY` for the duration of
+   the block.
+4. Exiting the block closes the child (`close_async`), including on the
+   exception path — for a WebSocket that is when the socket closes, since the
+   handler owns the socket's whole lifetime.
 
 Per-message work inside a WebSocket handler opens a nested `Scope.REQUEST` child
 of the SESSION container (`session_container.build_child_container(scope=Scope.REQUEST)`).
