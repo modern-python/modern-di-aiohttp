@@ -21,6 +21,8 @@
 
 Full guide: [aiohttp integration docs](https://modern-di.modern-python.org/integrations/aiohttp/)
 
+Usage example: [examples/](./examples)
+
 ## Installation
 
 ```bash
