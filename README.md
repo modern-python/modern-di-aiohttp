@@ -67,7 +67,9 @@ async def index(
 
 app = web.Application()
 app.router.add_get("/", index)
-setup_di(app, Container(groups=[Dependencies], validate=True))
+container = Container(groups=[Dependencies])
+setup_di(app, container)
+container.validate()  # optional fail-fast; must come after setup_di registers its providers
 ```
 
 An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection opens a `Scope.SESSION` one. The connection `aiohttp.web.Request` is resolvable within DI: HTTP handlers and `REQUEST`-scoped factories inject it by type via `aiohttp_request_provider`, while WebSocket handlers read it via `FromDI(aiohttp_websocket_provider)`. For per-message work inside a WebSocket handler, open a nested `Scope.REQUEST` child of the session container fetched with `fetch_request_container`.
