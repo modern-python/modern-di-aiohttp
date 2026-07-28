@@ -1,4 +1,5 @@
 import collections.abc
+import gc
 import http
 
 from aiohttp import web
@@ -69,3 +70,34 @@ async def test_child_container_closed_when_handler_raises(aiohttp_client: Aiohtt
     client = await aiohttp_client(app)
     assert (await client.get("/")).status == http.HTTPStatus.INTERNAL_SERVER_ERROR
     assert captured[0].closed is True
+
+
+async def test_finished_request_leaves_no_cyclic_garbage(aiohttp_client: AiohttpClient, app: web.Application) -> None:
+    # The container's context holds the Request, the Request is the mapping the container was
+    # stored in — a cycle per request, so nothing could be reclaimed by refcounting. Bare aiohttp
+    # produces no cyclic garbage, so anything counted here is ours.
+    seen: list[web.Request] = []
+
+    async def endpoint(request: web.Request) -> web.Response:
+        assert isinstance(request[_CONTAINER_REQUEST_KEY], Container)
+        seen.append(request)
+        return web.Response(text="ok")
+
+    app.router.add_get("/", endpoint)
+    client = await aiohttp_client(app)
+    for _ in range(5):  # let one-time allocations settle before measuring
+        await client.get("/")
+
+    gc.collect()
+    was_enabled = gc.isenabled()
+    gc.disable()
+    try:
+        for _ in range(20):
+            assert (await client.get("/")).status == http.HTTPStatus.OK
+        assert gc.collect() == 0
+    finally:
+        if was_enabled:
+            gc.enable()
+
+    # The entry is gone once the request is over — that is what breaks the cycle.
+    assert _CONTAINER_REQUEST_KEY not in seen[-1]
