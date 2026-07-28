@@ -38,8 +38,9 @@ async def greet(
 
 app = web.Application()
 app.router.add_get("/greet/{name}", greet)
-container = Container(groups=[Dependencies], validate=True)
+container = Container(groups=[Dependencies])
 setup_di(app, container)
+container.validate()  # optional fail-fast; must come after setup_di registers its providers
 
 
 if __name__ == "__main__":
