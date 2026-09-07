@@ -17,8 +17,7 @@ PyPI package.
 
 ## Architecture
 
-All implementation is `modern_di_aiohttp/main.py`, short enough to read whole. Read it, and
-[`docs/adr/`](docs/adr/) for why the connection is exposed the way it is.
+All implementation is `modern_di_aiohttp/main.py`, short enough to read whole. Read it.
 
 ### Testing patterns
 
