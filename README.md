@@ -21,7 +21,7 @@
 
 Full guide: [aiohttp integration docs](https://modern-di.modern-python.org/integrations/aiohttp/)
 
-Usage example: [examples/](./examples)
+Usage example: [examples/](https://github.com/modern-python/modern-di-aiohttp/tree/main/examples)
 
 ## Installation
 
@@ -88,7 +88,7 @@ An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection 
 
 ## 📦 [PyPI](https://pypi.org/project/modern-di-aiohttp)
 
-## 📝 [License](LICENSE)
+## 📝 [License](https://github.com/modern-python/modern-di-aiohttp/blob/main/LICENSE)
 
 ## Part of `modern-python`
 
