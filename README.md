@@ -72,6 +72,21 @@ setup_di(app, container)
 container.validate()  # optional fail-fast; must come after setup_di registers its providers
 ```
 
+`@inject` works the same on the methods of a class-based `web.View`. Decorate the handler method, not the class; aiohttp calls the method with no arguments, so the request is taken from `self.request`:
+
+```python
+class Users(web.View):
+    @inject
+    async def get(
+        self,
+        user_service: typing.Annotated[UserService, FromDI(Dependencies.user_service)],
+    ) -> web.Response:
+        return web.json_response({"debug": user_service.settings.debug})
+
+
+app.router.add_view("/users", Users)
+```
+
 An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection opens a `Scope.SESSION` one. The connection `aiohttp.web.Request` is resolvable within DI: HTTP handlers and `REQUEST`-scoped factories inject it by type via `aiohttp_request_provider`, while WebSocket handlers read it via `FromDI(aiohttp_websocket_provider)`. For per-message work inside a WebSocket handler, open a nested `Scope.REQUEST` child of the session container fetched with `fetch_request_container`.
 
 ## API
@@ -79,7 +94,7 @@ An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection 
 | Symbol | Description |
 |---|---|
 | `setup_di(app, container)` | Stores the container on the app, wires `on_startup`/`on_cleanup` (reopen on startup, close on cleanup), registers the connection providers, and installs the per-connection middleware |
-| `inject(handler)` | Decorator that resolves every `FromDI`-marked parameter from the request's child container and passes them to the handler |
+| `inject(handler)` | Decorator that resolves every `FromDI`-marked parameter from the request's child container and passes them to the handler; works on a function handler and on a method of a `web.View` subclass |
 | `FromDI(dependency)` | Inert `Annotated` marker resolved by `@inject`; accepts a provider or a type |
 | `fetch_di_container(app)` | Returns the app-scoped root container |
 | `fetch_request_container(request)` | Returns the per-connection child container the middleware built for this request |
