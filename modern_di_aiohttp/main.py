@@ -3,6 +3,7 @@
 import functools
 import typing
 
+import aiohttp.abc
 from aiohttp import web
 from modern_di import Container, Scope, integrations, providers
 
@@ -90,12 +91,23 @@ def setup_di(app: web.Application, container: Container) -> Container:
 FromDI = integrations.from_di
 
 
+def _find_request(handler_name: str, args: tuple[typing.Any, ...]) -> web.Request:
+    for arg in args:
+        if isinstance(arg, web.Request):
+            return arg
+        if isinstance(arg, aiohttp.abc.AbstractView):
+            return arg.request
+    msg = f"@inject requires {handler_name} to receive a web.Request or a web.View as a positional argument."
+    raise TypeError(msg)
+
+
 def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[..., typing.Awaitable[T]]:
     markers = integrations.parse_markers(func)
+    handler_name = getattr(func, "__qualname__", repr(func))
 
     @functools.wraps(func)
-    async def wrapper(request: web.Request) -> T:
-        child_container = fetch_request_container(request)
-        return await func(request, **integrations.resolve_markers(child_container, markers))
+    async def wrapper(*args: typing.Any, **kwargs: typing.Any) -> T:  # noqa: ANN401
+        child_container = fetch_request_container(_find_request(handler_name, args))
+        return await func(*args, **kwargs, **integrations.resolve_markers(child_container, markers))
 
     return wrapper
