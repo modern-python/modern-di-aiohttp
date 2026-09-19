@@ -14,7 +14,7 @@ def test_exactly_one_connection_provider_is_registered_by_type() -> None:
     connection provider makes ``setup_di`` raise ``DuplicateProviderTypeError`` for every
     application built. Reference-only is what lets a ``SESSION``-scoped connection provider exist
     at all, and the reason the WebSocket path reads the connection by provider reference instead of
-    by bare type (ADR 0001).
+    by bare type (``docs/adr/0001-two-connection-providers-one-reference-only.md``).
     """
     assert {provider.context_type for provider in _CONNECTION_PROVIDERS} == {web.Request}
 
