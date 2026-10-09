@@ -21,7 +21,7 @@ dependencies = [
     # pytest-aiohttp 1.1 requires aiohttp 3.11, and aiohttp ships no cp314 wheel before 3.13.
     "aiohttp>=3.11,<4; python_version < '3.14'",
     "aiohttp>=3.13,<4; python_version >= '3.14'",
-    "modern-di>=3.1.1,<5",
+    "modern-di>=4,<5",
 ]
 version = "0"
 
