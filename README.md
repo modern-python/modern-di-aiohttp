@@ -89,6 +89,8 @@ app.router.add_view("/users", Users)
 
 An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection opens a `Scope.SESSION` one. The connection `aiohttp.web.Request` is resolvable within DI: HTTP handlers and `REQUEST`-scoped factories inject it by type via `aiohttp_request_provider`, while WebSocket handlers read it via `FromDI(aiohttp_websocket_provider)`. For per-message work inside a WebSocket handler, open a nested `Scope.REQUEST` child of the session container fetched with `fetch_request_container`.
 
+Sub-apps added with `app.add_subapp` work with or without their own `setup_di`. When both the parent and the sub-app call `setup_di`, a sub-app route resolves from a child of the sub-app's root container, and the parent's middleware still opens and closes its own child container around it. When only the parent calls `setup_di`, a sub-app route resolves from a child of the parent's root container.
+
 ## API
 
 | Symbol | Description |
