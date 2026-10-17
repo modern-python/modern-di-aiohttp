@@ -5,7 +5,7 @@ import inspect
 import typing
 
 import aiohttp.abc
-from aiohttp import web
+from aiohttp import hdrs, web
 from modern_di import Container, Scope, integrations, providers
 
 
@@ -64,9 +64,8 @@ async def _di_middleware(
     # bind `web.Request`, so `integrations.classify_connection`'s isinstance
     # dispatch can't tell them apart — this probe is what picks the provider;
     # `integrations.bind` only derives the scope+context once it's picked.
-    provider = (
-        aiohttp_websocket_provider if web.WebSocketResponse().can_prepare(request).ok else aiohttp_request_provider
-    )
+    is_websocket = hdrs.UPGRADE in request.headers and web.WebSocketResponse().can_prepare(request).ok
+    provider = aiohttp_websocket_provider if is_websocket else aiohttp_request_provider
     match = integrations.bind(provider, request)
     async with fetch_di_container(request.app).build_child_container(
         scope=match.scope, context=match.context
