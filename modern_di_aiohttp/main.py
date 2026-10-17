@@ -1,6 +1,7 @@
 """modern-di integration for aiohttp."""
 
 import functools
+import inspect
 import typing
 
 import aiohttp.abc
@@ -105,13 +106,24 @@ def _find_request(handler_name: str, args: tuple[typing.Any, ...]) -> web.Reques
     raise TypeError(msg)
 
 
-def inject(func: typing.Callable[..., typing.Awaitable[T]]) -> typing.Callable[..., typing.Awaitable[T]]:
+def inject(func: typing.Callable[..., T]) -> typing.Callable[..., T]:
     markers = integrations.parse_markers(func)
     handler_name = getattr(func, "__qualname__", repr(func))
 
-    @functools.wraps(func)
-    async def wrapper(*args: typing.Any, **kwargs: typing.Any) -> T:  # noqa: ANN401
+    def resolve(args: tuple[typing.Any, ...]) -> dict[str, typing.Any]:
         child_container = fetch_request_container(_find_request(handler_name, args))
-        return await func(*args, **kwargs, **integrations.resolve_markers(child_container, markers))
+        return integrations.resolve_markers(child_container, markers)
+
+    if inspect.iscoroutinefunction(func):
+
+        @functools.wraps(func)
+        async def async_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:  # noqa: ANN401
+            return await func(*args, **kwargs, **resolve(args))
+
+        return typing.cast(typing.Callable[..., T], async_wrapper)
+
+    @functools.wraps(func)
+    def wrapper(*args: typing.Any, **kwargs: typing.Any) -> T:  # noqa: ANN401
+        return func(*args, **kwargs, **resolve(args))
 
     return wrapper
