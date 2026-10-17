@@ -95,7 +95,7 @@ Sub-apps added with `app.add_subapp` work with or without their own `setup_di`. 
 
 ### Sharing a container
 
-By default `setup_di` opens the root container on startup and closes it on cleanup. If the same container also serves another app, such as a worker or an MCP server from another modern-di integration, the first app to shut down would close it for the rest. Pass `manage_lifespan=False` and own the root yourself. The middleware still builds and closes a child container per connection.
+By default `setup_di` opens the root container on startup and closes it on cleanup. If the same container also serves an app of another modern-di integration, such as a FastStream consumer, the first app to shut down would close it for the rest. Pass `manage_lifespan=False` to every `setup_di` that shares the container and own the root yourself. The middleware still builds and closes a child container per connection. See [FastAPI and FastStream sharing a container](https://modern-di.modern-python.org/recipes/shared-container/) for the pattern.
 
 ```python
 import asyncio
