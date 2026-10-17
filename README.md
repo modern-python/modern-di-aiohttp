@@ -72,6 +72,8 @@ setup_di(app, container)
 container.validate()  # optional fail-fast; must come after setup_di registers its providers
 ```
 
+`@inject` also works on a plain `def` handler. It returns a sync wrapper for a sync function, so aiohttp handles the decorated handler the same way it handles the undecorated one, including its deprecation warning for sync handlers.
+
 `@inject` works the same on the methods of a class-based `web.View`. Decorate the handler method, not the class; aiohttp calls the method with no arguments, so the request is taken from `self.request`:
 
 ```python
@@ -96,7 +98,7 @@ Sub-apps added with `app.add_subapp` work with or without their own `setup_di`. 
 | Symbol | Description |
 |---|---|
 | `setup_di(app, container)` | Stores the container on the app, wires `on_startup`/`on_cleanup` (reopen on startup, close on cleanup), registers the connection providers, and installs the per-connection middleware |
-| `inject(handler)` | Decorator that resolves every `FromDI`-marked parameter from the request's child container and passes them to the handler; works on a function handler and on a method of a `web.View` subclass |
+| `inject(handler)` | Decorator that resolves every `FromDI`-marked parameter from the request's child container and passes them to the handler; works on a sync or `async def` function handler and on a method of a `web.View` subclass |
 | `FromDI(dependency)` | Inert `Annotated` marker resolved by `@inject`; accepts a provider or a type |
 | `fetch_di_container(app)` | Returns the app-scoped root container |
 | `fetch_request_container(request)` | Returns the per-connection child container the middleware built for this request |
