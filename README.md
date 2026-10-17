@@ -141,9 +141,10 @@ APP-scoped finalizers run once, when the `async with` block exits.
 | `aiohttp_request_provider` | `ContextProvider` for the current `aiohttp.web.Request` (`REQUEST` scope) |
 | `aiohttp_websocket_provider` | `ContextProvider` for the connection `aiohttp.web.Request` at WebSocket `SESSION` scope |
 
-## 📦 [PyPI](https://pypi.org/project/modern-di-aiohttp)
+## Links
 
-## 📝 [License](https://github.com/modern-python/modern-di-aiohttp/blob/main/LICENSE)
+- [PyPI](https://pypi.org/project/modern-di-aiohttp)
+- [License](https://github.com/modern-python/modern-di-aiohttp/blob/main/LICENSE)
 
 ## Part of `modern-python`
 
