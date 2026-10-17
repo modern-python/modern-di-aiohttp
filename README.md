@@ -119,6 +119,16 @@ async def main() -> None:
 
 APP-scoped finalizers run once, when the `async with` block exits.
 
+### Shutdown order
+
+`setup_di` appends the root container's close to `app.on_cleanup`. These hooks run before the close and can still resolve from the container:
+
+- `on_shutdown` handlers
+- `cleanup_ctx` teardown
+- `on_cleanup` handlers added before `setup_di`
+
+`on_cleanup` handlers added after `setup_di` run after the close and get `ContainerClosedError`. Add them before `setup_di`. If you can't, pass `manage_lifespan=False` and close the container yourself after `runner.cleanup()`, as in the example above.
+
 ## API
 
 | Symbol | Description |
