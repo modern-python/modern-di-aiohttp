@@ -7,7 +7,8 @@ Both connection providers bind `web.Request`
 passing the chosen provider to `integrations.bind` for the child's scope and context. The probe is
 aiohttp's own handshake check rather than a reimplementation that can drift from it: on a fresh
 response object it cannot raise, it is synchronous, and it neither consumes the request nor starts
-the handshake. dishka's `Connection == "Upgrade"` header comparison was rejected as brittle, missing
+the handshake. The probe is skipped when the request has no `Upgrade` header, because aiohttp's
+handshake rejects that case first, so the outcome is the same without the probe's cost. dishka's `Connection == "Upgrade"` header comparison was rejected as brittle, missing
 the legal `keep-alive, Upgrade` form and casing variants, and dispatching on the route was
 unavailable because scope selection runs before routing has produced a handler. The boundary is that
 scope follows the handshake headers and nothing else, so a request advertising a valid upgrade to a

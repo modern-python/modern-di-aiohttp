@@ -1,7 +1,9 @@
 import collections.abc
 import gc
 import http
+from unittest import mock
 
+import pytest
 from aiohttp import web
 from aiohttp.test_utils import TestClient
 from modern_di import Container, Scope
@@ -24,6 +26,22 @@ async def test_middleware_opens_request_scoped_child(aiohttp_client: AiohttpClie
     app.router.add_get("/", endpoint)
     client = await aiohttp_client(app)
     assert (await client.get("/")).status == http.HTTPStatus.OK
+
+
+async def test_a_request_without_an_upgrade_header_skips_the_handshake_probe(
+    aiohttp_client: AiohttpClient, app: web.Application, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def endpoint(request: web.Request) -> web.Response:
+        assert request[_CONTAINER_REQUEST_KEY].scope is Scope.REQUEST
+        return web.Response(text="ok")
+
+    app.router.add_get("/", endpoint)
+    client = await aiohttp_client(app)
+    websocket_response = mock.Mock(wraps=web.WebSocketResponse)
+    monkeypatch.setattr(web, "WebSocketResponse", websocket_response)
+
+    assert (await client.get("/")).status == http.HTTPStatus.OK
+    assert websocket_response.call_count == 0
 
 
 async def test_middleware_opens_session_scoped_child_for_websocket(
