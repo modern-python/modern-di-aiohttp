@@ -93,11 +93,37 @@ An HTTP request opens a `Scope.REQUEST` child container; a WebSocket connection 
 
 Sub-apps added with `app.add_subapp` work with or without their own `setup_di`. When both the parent and the sub-app call `setup_di`, a sub-app route resolves from a child of the sub-app's root container, and the parent's middleware still opens and closes its own child container around it. When only the parent calls `setup_di`, a sub-app route resolves from a child of the parent's root container.
 
+### Sharing a container
+
+By default `setup_di` opens the root container on startup and closes it on cleanup. If the same container also serves another app, such as a worker or an MCP server from another modern-di integration, the first app to shut down would close it for the rest. Pass `manage_lifespan=False` and own the root yourself. The middleware still builds and closes a child container per connection.
+
+```python
+import asyncio
+
+
+async def main() -> None:
+    app = web.Application()
+    container = Container(groups=[Dependencies])
+    setup_di(app, container, manage_lifespan=False)
+
+    async with container:
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "localhost", 8080)
+        await site.start()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            await runner.cleanup()
+```
+
+APP-scoped finalizers run once, when the `async with` block exits.
+
 ## API
 
 | Symbol | Description |
 |---|---|
-| `setup_di(app, container)` | Stores the container on the app, wires `on_startup`/`on_cleanup` (reopen on startup, close on cleanup), registers the connection providers, and installs the per-connection middleware |
+| `setup_di(app, container, *, manage_lifespan=True)` | Stores the container on the app, wires `on_startup`/`on_cleanup` (reopen on startup, close on cleanup), registers the connection providers, and installs the per-connection middleware. With `manage_lifespan=False` it skips the `on_startup`/`on_cleanup` hooks and never opens or closes the root container (see Sharing a container) |
 | `inject(handler)` | Decorator that resolves every `FromDI`-marked parameter from the request's child container and passes them to the handler; works on a sync or `async def` function handler and on a method of a `web.View` subclass |
 | `FromDI(dependency)` | Inert `Annotated` marker resolved by `@inject`; accepts a provider or a type |
 | `fetch_di_container(app)` | Returns the app-scoped root container |

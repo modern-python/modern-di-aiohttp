@@ -18,7 +18,8 @@ connection is meant, because this package always has more than one of each in pl
 
 **Root container**:
 The application-lifetime `Container` handed to `setup_di` and stored on the `web.Application`,
-opened on startup and closed on cleanup. Every other container here descends from it, so an
+opened on startup and closed on cleanup unless `setup_di` gets `manage_lifespan=False`, in which
+case the user opens and closes it. Every other container here descends from it, so an
 unqualified "the container" is ambiguous in this repo and should not be written.
 
 **Child container**:

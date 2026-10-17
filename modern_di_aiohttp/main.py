@@ -84,11 +84,12 @@ async def _di_middleware(
                 request[_CONTAINER_REQUEST_KEY] = outer_container
 
 
-def setup_di(app: web.Application, container: Container) -> Container:
+def setup_di(app: web.Application, container: Container, *, manage_lifespan: bool = True) -> Container:
     app[_DI_CONTAINER_APP_KEY] = container
     container.add_providers(*_CONNECTION_PROVIDERS)
-    app.on_startup.append(_on_startup)
-    app.on_cleanup.append(_on_cleanup)
+    if manage_lifespan:
+        app.on_startup.append(_on_startup)
+        app.on_cleanup.append(_on_cleanup)
     app.middlewares.append(_di_middleware)
     return container
 
