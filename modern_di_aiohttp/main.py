@@ -70,13 +70,17 @@ async def _di_middleware(
     async with fetch_di_container(request.app).build_child_container(
         scope=match.scope, context=match.context
     ) as child_container:
+        outer_container = request.get(_CONTAINER_REQUEST_KEY)
         request[_CONTAINER_REQUEST_KEY] = child_container
         try:
             return await handler(request)
         finally:
             # The container's context holds this request, so leaving the entry behind closes a
             # cycle and the request could only be reclaimed by the GC.
-            del request[_CONTAINER_REQUEST_KEY]
+            if outer_container is None:
+                del request[_CONTAINER_REQUEST_KEY]
+            else:
+                request[_CONTAINER_REQUEST_KEY] = outer_container
 
 
 def setup_di(app: web.Application, container: Container) -> Container:
