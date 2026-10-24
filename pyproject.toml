@@ -19,9 +19,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-    # pytest-aiohttp 1.1 requires aiohttp 3.11, and aiohttp ships no cp314 wheel before 3.13.
+    # pytest-aiohttp 1.1 requires aiohttp 3.11, and aiohttp ships no cp314 wheel before 3.13 and no
+    # cp315 wheel before 3.14.4.
     "aiohttp>=3.11,<4; python_version < '3.14'",
-    "aiohttp>=3.13,<4; python_version >= '3.14'",
+    "aiohttp>=3.13,<4; python_version == '3.14'",
+    "aiohttp>=3.14.4,<4; python_version >= '3.15'",
     "modern-di>=4.2,<5",
 ]
 version = "0"
